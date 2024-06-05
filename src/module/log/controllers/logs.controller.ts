@@ -1,4 +1,4 @@
-import { BadRequestException, Controller, Get, Param, Query } from '@nestjs/common';
+import { BadRequestException, Controller, Get, NotFoundException, Param, Query } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { ApiTags, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { ProcessLogCommand } from '../commands/process-log.command';
@@ -59,13 +59,14 @@ export class LogsController {
             });
         } catch (error) {
             console.error('Error downloading or saving the log file:', error.message);
-            throw new Error('Failed to process the log file');
+            throw new Error(error.message);
         }
     }
 
     @Get('init-games')
     @ApiResponse({ status: 200, description: 'Successfully fetched initial games' })
     async getInitGames() {
+        await this.processLog()
         await this.queryBus.execute(new FetchLogsQuery());
         return this.logsService.getInitGames();
     }
@@ -73,16 +74,9 @@ export class LogsController {
     @Get('client-connections')
     @ApiResponse({ status: 200, description: 'Successfully fetched client connections' })
     async getClientConnections() {
+        await this.processLog()
         await this.queryBus.execute(new FetchLogsQuery());
         return this.logsService.getClientConnections();
-    }
-
-    @Get('items-collected/:playerId')
-    @ApiParam({ name: 'playerId', description: 'The ID of the player' })
-    @ApiResponse({ status: 200, description: 'Successfully fetched items collected by player' })
-    async getItemsCollected(@Param('playerId') playerId: string) {
-        await this.queryBus.execute(new FetchLogsQuery());
-        return this.logsService.getItemsCollected(playerId);
     }
 
     @Get('kills')
@@ -92,15 +86,35 @@ export class LogsController {
         return this.logsService.getKills();
     }
 
+    @Get('game-statistics/:gameId')
+    @ApiParam({ name: 'gameId', description: 'The ID of the game' })
+    @ApiResponse({ status: 200, description: 'Successfully fetched game statistics' })
+    async getGameStatisticsById(@Param('gameId') gameId: string): Promise<GameStatistics> {
+        try {
+            await this.processLog()
+            await this.queryBus.execute(new FetchLogsQuery());
+            const parsedGameId = parseInt(gameId, 10);
+            const gameStatistics: GameStatistics = this.logsService.getGameStatisticsById(parsedGameId);
+
+            return gameStatistics;
+        } catch (error) {
+            console.error('Error fetching game statistics by ID:', error.message);
+            throw new BadRequestException(error.message);
+        }
+    }
 
     @Get('game-statistics')
     @ApiResponse({ status: 200, description: 'Successfully fetched game statistics' })
     async getGameStatistics(): Promise<GameStatistics[]> {
-        await this.queryBus.execute(new FetchLogsQuery());
-        const gameStatistics: GameStatistics[] = this.logsService.getGameStatistics();
+        try {
+            await this.processLog()
+            await this.queryBus.execute(new FetchLogsQuery());
+            const gameStatistics: GameStatistics[] = this.logsService.getGameStatistics();
 
-
-        return gameStatistics;
+            return gameStatistics;
+        } catch (error) {
+            console.error('Error fetching game statistics:', error.message);
+            throw new BadRequestException(error.message);
+        }
     }
-
 }

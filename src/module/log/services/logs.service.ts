@@ -13,6 +13,7 @@ export class LogsService {
     private readonly SHUTDOWN_GAME_IDENTIFIER = 'ShutdownGame';
     private readonly WORLD_IDENTIFIER = '<world>';
     private readonly KILL_BY_IDENTIFIER = 'by';
+    private readonly MAGIC_COUNT_NUMBER = 1;
 
     constructor(private readonly eventBus: EventBus) { }
 
@@ -74,12 +75,31 @@ export class LogsService {
     }
 
 
-    getGameStatistics(): any[] {
+    getGameStatistics(): any {
         const games = this.groupLogsByGame();
-        return games.map(game => this.calculateGameStatistics(game));
+        const totalGames = games.length + this.MAGIC_COUNT_NUMBER 
+
+        const statistics = games.map(game => this.calculateGameStatistics(game));
+
+        return {
+            totalGames,
+            statistics
+        };
     }
 
+
+    getGameStatisticsById(gameId: number): any {
+        const games = this.groupLogsByGame();
+        const gameLogs = games[gameId];
+        if (!gameLogs) {
+            throw new Error(`Game with ID ${gameId} not found.`);
+        }
+        return this.calculateGameStatistics(gameLogs)
+    }
+
+
     private calculateGameStatistics(gameLogs: string[]): any {
+
         const totalKills = this.calculateTotalKills(gameLogs);
         const killsByCause = this.calculateKillsByCause(gameLogs);
         const killsByWorld = this.calculateKillsByWorld(gameLogs);
@@ -93,6 +113,10 @@ export class LogsService {
             rankingCauses,
             rankingKillers
         };
+    }
+
+    private calculateTotalGames(gameLogs: string[]): number {
+        return gameLogs.filter(log => log.includes(this.INIT_GAME_IDENTIFIER)).length;
     }
 
     private calculateTotalKills(gameLogs: string[]): number {
