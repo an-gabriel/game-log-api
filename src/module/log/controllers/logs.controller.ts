@@ -1,12 +1,20 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Param, Query } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
-import { ApiTags, ApiResponse, ApiParam } from '@nestjs/swagger';
+import { ApiTags, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { ProcessLogCommand } from '../commands/process-log.command';
 import { FetchLogsQuery } from '../queries/fetch-logs.query';
 import { LogsService } from '../services/logs.service';
 import fetch from 'node-fetch';
 import * as fs from 'fs';
 import * as path from 'path';
+
+interface GameStatistics {
+    totalKills: number;
+    killsByCause: any[];
+    killsByWorld: number;
+    rankingCauses: any[];
+    rankingKillers: any[];
+}
 
 @ApiTags('logs')
 @Controller('logs')
@@ -84,19 +92,15 @@ export class LogsController {
         return this.logsService.getKills();
     }
 
-    @Get('kill-stats')
-    @ApiResponse({ status: 200, description: 'Successfully fetched kills status' })
-    async getKillStats() {
+
+    @Get('game-statistics')
+    @ApiResponse({ status: 200, description: 'Successfully fetched game statistics' })
+    async getGameStatistics(): Promise<GameStatistics[]> {
         await this.queryBus.execute(new FetchLogsQuery());
-        return this.logsService.getKillStats();
-    }
+        const gameStatistics: GameStatistics[] = this.logsService.getGameStatistics();
 
 
-    @Get('teste')
-    @ApiResponse({ status: 200, description: 'Successfully fetched kills status' })
-    async teste() {
-        await this.queryBus.execute(new FetchLogsQuery());
-        return this.logsService.getGameStatistics();
+        return gameStatistics;
     }
 
 }
