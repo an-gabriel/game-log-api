@@ -16,7 +16,7 @@ export class LogsService {
 
     constructor(private readonly eventBus: EventBus) { }
 
-    setLogs(logs: string[]) {
+    async setLogs(logs: string[]): Promise<void> {
         this.logs = logs;
     }
 
@@ -53,38 +53,6 @@ export class LogsService {
     getKills(): string[] {
         return this.logs.filter(log => log.includes(this.KILL_LOG_IDENTIFIER));
     }
-
-    getKillStats(): any {
-        const totalKills = this.logs.filter(log => log.includes(this.KILL_LOG_IDENTIFIER)).length;
-        const killsByCause = {};
-        const killsByPlayer = {};
-        let killsByWorld = 0;
-
-        this.logs.forEach(log => {
-            const parts = log.split(' ');
-            const causeIndex = parts.indexOf(this.KILL_BY_IDENTIFIER);
-            if (causeIndex !== -1 && parts[causeIndex + 1] !== this.WORLD_IDENTIFIER) {
-                const cause = parts[causeIndex + 1];
-                killsByCause[cause] = (killsByCause[cause] || 0) + 1;
-            } else if (causeIndex !== -1 && parts[causeIndex + 1] === this.WORLD_IDENTIFIER) {
-                killsByWorld++;
-            }
-
-            const killerIndex = parts.indexOf('killed');
-            if (killerIndex !== -1) {
-                const player = parts[killerIndex + 1];
-                killsByPlayer[player] = (killsByPlayer[player] || 0) + 1;
-            }
-        });
-
-        return {
-            totalKills,
-            killsByCause,
-            killsByPlayer,
-            killsByWorld
-        };
-    }
-
 
     groupLogsByGame(): string[][] {
         const games = [];
