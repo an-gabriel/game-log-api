@@ -7,6 +7,13 @@ import * as fs from 'fs';
 export class LogsService {
     private logs: string[];
 
+    // Constantes para strings repetidas
+    private readonly KILL_LOG_IDENTIFIER = 'Kill';
+    private readonly INIT_GAME_IDENTIFIER = 'InitGame';
+    private readonly SHUTDOWN_GAME_IDENTIFIER = 'ShutdownGame';
+    private readonly WORLD_IDENTIFIER = '<world>';
+    private readonly KILL_BY_IDENTIFIER = 'by';
+
     constructor(private readonly eventBus: EventBus) { }
 
     setLogs(logs: string[]) {
@@ -14,54 +21,52 @@ export class LogsService {
     }
 
     async fetchLogsFromFile(filePath: string): Promise<string[]> {
-        return new Promise((resolve, reject) => {
-            fs.readFile(filePath, 'utf8', (err, data) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(data.split('\n'));
-                }
-            });
-        });
+        try {
+            const data = await fs.promises.readFile(filePath, 'utf8');
+            return data.split('\n');
+        } catch (error) {
+            console.error('Error reading log file:', error);
+            throw error;
+        }
     }
 
-    getAllLogs() {
+    getAllLogs(): string[] {
         return this.logs;
     }
 
-    emitLogProcessedEvent(logs: string[]) {
+    emitLogProcessedEvent(logs: string[]): void {
         this.eventBus.publish(new LogProcessedEvent(logs));
     }
 
-    getInitGames() {
-        return this.logs.filter(log => log.includes('InitGame'));
+    getInitGames(): string[] {
+        return this.logs.filter(log => log.includes(this.INIT_GAME_IDENTIFIER));
     }
 
-    getClientConnections() {
+    getClientConnections(): string[] {
         return this.logs.filter(log => log.includes('ClientConnect'));
     }
 
-    getItemsCollected(playerId: string) {
+    getItemsCollected(playerId: string): string[] {
         return this.logs.filter(log => log.includes(`Item: ${playerId}`));
     }
 
-    getKills() {
-        return this.logs.filter(log => log.includes('Kill'));
+    getKills(): string[] {
+        return this.logs.filter(log => log.includes(this.KILL_LOG_IDENTIFIER));
     }
 
-    getKillStats() {
-        const totalKills = this.logs.filter(log => log.includes('Kill')).length;
+    getKillStats(): any {
+        const totalKills = this.logs.filter(log => log.includes(this.KILL_LOG_IDENTIFIER)).length;
         const killsByCause = {};
         const killsByPlayer = {};
         let killsByWorld = 0;
 
         this.logs.forEach(log => {
             const parts = log.split(' ');
-            const causeIndex = parts.indexOf('by');
-            if (causeIndex !== -1 && parts[causeIndex + 1] !== '<world>') {
+            const causeIndex = parts.indexOf(this.KILL_BY_IDENTIFIER);
+            if (causeIndex !== -1 && parts[causeIndex + 1] !== this.WORLD_IDENTIFIER) {
                 const cause = parts[causeIndex + 1];
                 killsByCause[cause] = (killsByCause[cause] || 0) + 1;
-            } else if (causeIndex !== -1 && parts[causeIndex + 1] === '<world>') {
+            } else if (causeIndex !== -1 && parts[causeIndex + 1] === this.WORLD_IDENTIFIER) {
                 killsByWorld++;
             }
 
@@ -86,21 +91,18 @@ export class LogsService {
         let currentGameLogs = [];
 
         for (const log of this.logs) {
-            if (log.includes('InitGame')) {
-                // Inicia um novo conjunto de logs para um novo jogo
+            if (log.includes(this.INIT_GAME_IDENTIFIER)) {
                 currentGameLogs = [];
             }
 
-            // Adiciona o log atual ao conjunto de logs do jogo atual
             currentGameLogs.push(log);
 
-            if (log.includes('ShutdownGame')) {
-                // Finaliza o jogo e adiciona o conjunto de logs ao array de jogos
+            if (log.includes(this.SHUTDOWN_GAME_IDENTIFIER)) {
                 games.push([...currentGameLogs]);
             }
         }
 
-        return games.reverse();;
+        return games.reverse();
     }
 
 
@@ -126,7 +128,7 @@ export class LogsService {
     }
 
     private calculateTotalKills(gameLogs: string[]): number {
-        return gameLogs.filter(log => log.includes('Kill')).length;
+        return gameLogs.filter(log => log.includes(this.KILL_LOG_IDENTIFIER)).length;
     }
 
     private calculateKillsByCause(gameLogs: string[]): any[] {
@@ -134,13 +136,13 @@ export class LogsService {
 
         gameLogs.forEach(log => {
             const parts = log.split(' ');
-            const killIndex = parts.indexOf('Kill:');
+            const killIndex = parts.indexOf(`${this.KILL_LOG_IDENTIFIER}:`);
 
             if (killIndex !== -1) {
                 const [killerName, killedName] = log.split(":")[log.split(":").length - 1].split(' killed ');
                 const [killed, causeOfDeath] = killedName.split(' by ');
 
-                if (!causeOfDeath.startsWith('<world>')) {
+                if (!causeOfDeath.startsWith(this.WORLD_IDENTIFIER)) {
                     killsByCause.push({
                         killer: killerName.trim(),
                         killed: killed.trim(),
@@ -154,9 +156,9 @@ export class LogsService {
     }
 
     private calculateKillsByWorld(gameLogs: string[]): number {
-        return gameLogs.filter(log => log.includes('<world>')).length;
+        return gameLogs.filter(log => log.includes(this.WORLD_IDENTIFIER)).length;
     }
-    
+
     private calculateRankingCauses(killsByCause: any[]): any[] {
         return this.calculateRanking(killsByCause, 'cause');
     }
@@ -178,6 +180,4 @@ export class LogsService {
 
         return ranking.sort((a, b) => b.quantity - a.quantity);
     }
-
-
 }
