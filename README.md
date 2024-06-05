@@ -21,7 +21,7 @@ Este é um projeto para analisar logs de jogos e fornecer estatísticas sobre os
 1. Clone o repositório:
 
 ```bash
-git clone https://github.com/seu-usuario/game-logs-analyzer.git
+git clone git@github.com:an-gabriel/game-log-api.git
 ```
 
 2. Instale as dependências:
