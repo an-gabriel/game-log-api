@@ -37,11 +37,11 @@ npm install
 npm start
 ```
 
-4. O servidor estará em execução em `http://localhost:3000`.
+4. O servidor estará em execução em `http://localhost:3000/logs`.
 
 ## Endpoints da API
 
-A documentação da API pode ser acessada em `http://localhost:3000/docs`, após o servidor estar em execução.
+A documentação da API pode ser acessada em `http://localhost:3000/api`, após o servidor estar em execução.
 
 ## Contribuição
 
