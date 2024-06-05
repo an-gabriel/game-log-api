@@ -114,17 +114,18 @@ export class LogsService {
         const killsByCause = this.calculateKillsByCause(gameLogs);
         const killsByWorld = this.calculateKillsByWorld(gameLogs);
         const rankingCauses = this.calculateRankingCauses(killsByCause);
+        const rankingKillers = this.calculateRankingKillers(killsByCause);
 
         return {
             totalKills,
             killsByCause,
             killsByWorld,
-            rankingCauses
+            rankingCauses,
+            rankingKillers
         };
     }
 
     private calculateTotalKills(gameLogs: string[]): number {
-
         return gameLogs.filter(log => log.includes('Kill')).length;
     }
 
@@ -155,17 +156,27 @@ export class LogsService {
     private calculateKillsByWorld(gameLogs: string[]): number {
         return gameLogs.filter(log => log.includes('<world>')).length;
     }
-
+    
     private calculateRankingCauses(killsByCause: any[]): any[] {
-        return killsByCause.reduce((acc, curr) => {
-            const existingCause = acc.find(item => item.cause === curr.cause);
-            if (existingCause) {
-                existingCause.quantity++;
+        return this.calculateRanking(killsByCause, 'cause');
+    }
+
+    private calculateRankingKillers(killsByCause: any[]): any[] {
+        return this.calculateRanking(killsByCause, 'killer');
+    }
+
+    private calculateRanking(items: any[], key: string): any[] {
+        const ranking = items.reduce((acc, curr) => {
+            const existingItem = acc.find(item => item[key] === curr[key]);
+            if (existingItem) {
+                existingItem.quantity++;
             } else {
-                acc.push({ cause: curr.cause, quantity: 1 });
+                acc.push({ [key]: curr[key], quantity: 1 });
             }
             return acc;
         }, []);
+
+        return ranking.sort((a, b) => b.quantity - a.quantity);
     }
 
 
